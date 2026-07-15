@@ -54,13 +54,38 @@ Regex patterns are compiled once at module import time in the scanner to elimina
 
 The mock malicious skill fixture located at tests/malicious_skill.py in the ai-skill-scanner repository serves as the canonical test case. It exercises all high-severity detection paths (dangerous execution, exfiltration callbacks, prompt injection, and obfuscation) and is used by test_malicious_skill_fixture to validate both correctness and performance characteristics.
 
+## Release Process (latest_commit_sha)
+
+The `manifest.json` field `latest_commit_sha` is used by the scanner for integrity verification when running `--update-signatures`.
+
+### How to perform a release
+
+1. Make all desired changes to signature files and `manifest.json`.
+2. Commit the changes.
+3. Create and push a new tag:
+   ```bash
+   git tag v2026.07.16
+   git push origin v2026.07.16
+   ```
+4. Update `latest_commit_sha` in `manifest.json` to the current HEAD:
+   ```bash
+   LATEST_SHA=$(git rev-parse HEAD)
+   jq --arg sha "$LATEST_SHA" '.latest_commit_sha = $sha' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+   git add manifest.json
+   git commit --amend --no-edit
+   git push --force-with-lease
+   ```
+5. (Optional) Create a GitHub Release from the tag for visibility.
+
+After this process, any scanner running `--update-signatures` will verify the fetched commit matches the pinned SHA.
+
 ## Contributing New Signatures
 
 1. Fork this repository.
 2. Add or edit a .json file inside signatures/.
 3. Update manifest.json if adding a new file.
 4. Open a pull request. The validate workflow will check syntax and required fields.
-5. Once merged, tag a new release so scanners can detect the update.
+5. Once merged, follow the Release Process above so scanners can detect the update.
 
 ## Versioning
 
