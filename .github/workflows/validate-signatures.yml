@@ -7,51 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install JSON schema validator
-        run: pip install jsonschema
-      - name: Validate manifest.json
-        run: |
-          python -c '
-import json
-import jsonschema
-manifest = json.load(open("manifest.json"))
-schema = {
-  "type": "object",
-  "required": ["version", "minimum_scanner_version", "signatures"],
-  "properties": {
-    "version": {"type": "string"},
-    "minimum_scanner_version": {"type": "string"},
-    "signatures": {"type": "array", "items": {"type": "string"}}
-  }
-}
-jsonschema.validate(manifest, schema)
-print("manifest.json is valid")
-'
-      - name: Validate all signature files
-        run: |
-          for f in signatures/*.json; do
-            python -c '
-import json
-import sys
-data = json.load(open(sys.argv[1]))
-if not isinstance(data, list):
-  sys.exit(1)
-for entry in data:
-  for key in ["id", "pattern", "severity", "description"]:
-    if key not in entry:
-      print(f"Missing {key} in {sys.argv[1]}")
-      sys.exit(1)
-print(f"{sys.argv[1]} is valid")
-' "$f"
-          done
-      - name: Check manifest lists every file
-        run: |
-          listed=$(python -c 'import json; print(" ".join(json.load(open("manifest.json"))["signatures"]))')
-          for f in signatures/*.json; do
-            base=$(basename "$f")
-            if [[ "$listed" != *"$base"* ]]; then
-              echo "ERROR: $base missing from manifest.json"
-              exit 1
-            fi
-          done
-          echo "All signature files are listed in manifest"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate signatures
+        run: python scripts/validate_signatures.py
