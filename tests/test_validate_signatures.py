@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for validate_signatures.py"""
 import json
+import sys
 import tempfile
 from pathlib import Path
 import pytest
