@@ -1,0 +1,22 @@
+[
+  {
+    "id": "OB-001",
+    "pattern": "base64\.(?:b64encode|b64decode|standard_b64decode)",
+    "ignorecase": true,
+    "severity": "medium",
+    "description": "Base64 encode/decode operations that may hide payloads or exfil data in skill code or prompts",
+    "added_in": "2026.07.15",
+    "references": [
+      "https://example.com/advisory/obfuscated-skills"
+    ]
+  },
+  {
+    "id": "OB-002",
+    "pattern": "(?:marshal\.loads|zlib\.decompress|codecs\.decode.*rot)",
+    "ignorecase": true,
+    "severity": "high",
+    "description": "Obfuscated payload unpacking patterns commonly used in malicious droppers or memory poisoning",
+    "added_in": "2026.07.15",
+    "references": []
+  }
+]
