@@ -10,6 +10,34 @@ This repository contains only data. The scanner tool consumes these signatures v
 - signatures/ — directory containing individual JSON rule files
 - .github/workflows/validate-signatures.yml — PR validation for JSON schema and structure
 
+## Named Regex Groups and Non-Capturing Groups
+
+Signature patterns use regular expressions. Capturing groups ( ... ) extract substrings into match groups for later processing. Non-capturing groups (?: ... ) group alternatives without capturing, which is mandatory in these patterns for performance. The scanner only tests for the presence of a match and never uses captured text, so every group in EXFIL_PATTERNS and signature files must use the non-capturing form to avoid unnecessary allocation.
+
+Named groups (?P<name>...) allow later reference by name in Python re but are not required here because the scanner does not post-process captures.
+
+Example of mandatory non-capturing form used throughout:
+
+```json
+"pattern": "(?:ignore|override).*?(?:previous|all).*?(?:instructions|rules)"
+```
+
+## JSON Schema for Rule Entries
+
+Every object in a signatures/*.json file must contain exactly these fields:
+
+- id (string, required): Unique rule identifier e.g. PI-001
+- pattern (string, required): Valid Python re pattern string
+- ignorecase (boolean, required): true for case-insensitive match
+- severity (string, required): high, medium or low
+- description (string, required): Human explanation of the threat
+- added_in (string, required): Version or date the rule was added
+
+Optional future fields may include:
+- references (array of strings): URLs to advisories, CVEs or test cases
+
+The validate-signatures workflow enforces this schema on every pull request.
+
 ## Contributing New Signatures
 
 1. Fork this repository.
@@ -18,13 +46,9 @@ This repository contains only data. The scanner tool consumes these signatures v
 4. Open a pull request. The validate workflow will check syntax and required fields.
 5. Once merged, tag a new release so scanners can detect the update.
 
-Each signature entry must include: id, pattern, ignorecase, severity (high/medium/low), description, added_in.
-
-See signatures/prompt_injection.json for the exact schema.
-
 ## Versioning
 
-Releases follow calendar versioning (YYYY.MM.DD). The manifest.version field is the authoritative version string.
+Releases follow calendar versioning (YYYY.MM.DD). The manifest.version field is the authoritative version string. Scanners compare this value before loading.
 
 ## License
 
