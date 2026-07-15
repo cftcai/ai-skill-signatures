@@ -13,5 +13,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run unit tests
+        run: pytest tests/ -q
+
       - name: Validate signatures
         run: python scripts/validate_signatures.py
