@@ -1,0 +1,18 @@
+[
+  {
+    "id": "PI-001",
+    "pattern": "(?:ignore|override|forget|discard).*?(?:previous|all|system|prior).*?(?:instructions|rules|policies|guidelines)",
+    "ignorecase": true,
+    "severity": "high",
+    "description": "Direct prompt override attempting to bypass safety policies or force data exfiltration",
+    "added_in": "2026.07.01"
+  },
+  {
+    "id": "PI-002",
+    "pattern": "(?:exfiltrat|leak|steal|callback|phonehome).*?(?:data|secret|key|token|memory|context|prompt|user)",
+    "ignorecase": true,
+    "severity": "high",
+    "description": "Skill definition instructs the agent to send sensitive data to an external callback",
+    "added_in": "2026.07.10"
+  }
+]

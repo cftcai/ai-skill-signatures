@@ -1,0 +1,18 @@
+[
+  {
+    "id": "EX-001",
+    "pattern": "https?://(?!api\\.(openai|anthropic|groq|x\\.ai)|localhost|127\\.0\\.0\\.1)[^\\s\"'`]{8,}",
+    "ignorecase": true,
+    "severity": "high",
+    "description": "Hardcoded URL to a non-allowlisted host that may receive exfiltrated data",
+    "added_in": "2026.07.05"
+  },
+  {
+    "id": "EX-002",
+    "pattern": "(?:requests|urllib|httpx|socket)\\s*\\.\\s*(?:post|get|send|connect)",
+    "ignorecase": true,
+    "severity": "medium",
+    "description": "Network call that could be used to transmit secrets or agent state",
+    "added_in": "2026.07.12"
+  }
+]
