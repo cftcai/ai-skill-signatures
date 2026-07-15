@@ -1,6 +1,7 @@
 {
   "version": "2026.07.15.2",
   "minimum_scanner_version": "1.1.0",
+  "latest_commit_sha": "PLACEHOLDER_REPLACE_ON_RELEASE",
   "signatures": [
     "prompt_injection.json",
     "exfiltration_callbacks.json",
