@@ -2,7 +2,7 @@
 
 Versioned collection of detection patterns for the ai-skill-scanner.
 
-**Web frontend demo**: https://github.com/cftcai/ai-skill-scanner-web
+**Web interface**: https://github.com/cftcai/ai-skill-scanner-web
 
 This repository contains only data. The scanner tool consumes these signatures via git pull or shallow clone.
 
