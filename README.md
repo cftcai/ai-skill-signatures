@@ -54,30 +54,42 @@ Regex patterns are compiled once at module import time in the scanner to elimina
 
 The mock malicious skill fixture located at tests/malicious_skill.py in the ai-skill-scanner repository serves as the canonical test case. It exercises all high-severity detection paths (dangerous execution, exfiltration callbacks, prompt injection, and obfuscation) and is used by test_malicious_skill_fixture to validate both correctness and performance characteristics.
 
-## Release Process (latest_commit_sha)
+## Release Process
 
-The `manifest.json` field `latest_commit_sha` is used by the scanner for integrity verification when running `--update-signatures`.
+Signature updates are published by merging to `main`; scanners pick them up via
+shallow clone / `git pull` on their next run.
 
-### How to perform a release
-
-1. Make all desired changes to signature files and `manifest.json`.
-2. Commit the changes.
-3. Create and push a new tag:
+1. Add or edit files under `signatures/` and update `manifest.json` (bump
+   `version`, and add the file to the `signatures` list if it is new). Manifest
+   paths are relative to the repository root, e.g.
+   `signatures/prompt_injection.json` — this is how the scanner resolves them
+   against its local clone.
+2. Open a pull request. The **Validate Signatures** workflow checks JSON
+   structure, required fields, regex compilability, and that `manifest.json`
+   lists exactly the files present on disk.
+3. Merge to `main`. Do **not** force-push or otherwise rewrite `main` history:
+   scanners fetch with `git pull --ff-only`, which fails on rewritten history
+   and causes them to silently fall back to the built-in patterns.
+4. (Optional) Tag the release for traceability:
    ```bash
-   git tag v2026.07.16
+   git tag -a v2026.07.16 -m "Signature release 2026.07.16"
    git push origin v2026.07.16
    ```
-4. Update `latest_commit_sha` in `manifest.json` to the current HEAD:
-   ```bash
-   LATEST_SHA=$(git rev-parse HEAD)
-   jq --arg sha "$LATEST_SHA" '.latest_commit_sha = $sha' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
-   git add manifest.json
-   git commit --amend --no-edit
-   git push --force-with-lease
-   ```
-5. (Optional) Create a GitHub Release from the tag for visibility.
 
-After this process, any scanner running `--update-signatures` will verify the fetched commit matches the pinned SHA.
+### A note on `latest_commit_sha` and integrity
+
+`manifest.json` carries a `latest_commit_sha` field that the scanner compares
+against the fetched `HEAD`. It ships as a `PLACEHOLDER…` value, and the scanner
+**skips** verification for placeholder values.
+
+Storing the SHA inside this repository cannot by itself provide integrity: an
+attacker able to push here controls both `HEAD` and the manifest, so a
+self-referential pin verifies nothing. (It is also impractical — a commit cannot
+contain its own resulting SHA.) Robust verification must be **client-side**: the
+scanner pinning a known-good tag/SHA it trusts, or verifying a maintainer-signed
+tag (`git tag -v`). That is tracked as scanner-side work. Until it lands, treat
+`latest_commit_sha` as advisory, keep the placeholder, and rely on HTTPS plus a
+trusted `main`.
 
 ## Contributing New Signatures
 
@@ -85,7 +97,7 @@ After this process, any scanner running `--update-signatures` will verify the fe
 2. Add or edit a .json file inside signatures/.
 3. Update manifest.json if adding a new file.
 4. Open a pull request. The validate workflow will check syntax and required fields.
-5. Once merged, follow the Release Process above so scanners can detect the update.
+5. Once merged to `main`, scanners pick up the change on their next run.
 
 ## Versioning
 
