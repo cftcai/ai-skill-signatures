@@ -81,3 +81,65 @@ def test_main_missing_signatures_dir(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit):
         validate_main()
+
+
+def test_validate_signature_file_bad_regex(tmp_path):
+    sig = [{
+        "id": "TEST-002",
+        "pattern": "(unclosed[group",
+        "ignorecase": True,
+        "severity": "high",
+        "description": "Invalid regex",
+        "added_in": "2026.07.16"
+    }]
+    sig_file = tmp_path / "test.json"
+    sig_file.write_text(json.dumps(sig))
+    with pytest.raises(SystemExit):
+        validate_signature_file(sig_file)
+
+
+def test_main_valid_with_prefixed_paths(tmp_path, monkeypatch):
+    """A manifest listing repo-root-relative paths must validate cleanly."""
+    sigs_dir = tmp_path / "signatures"
+    sigs_dir.mkdir()
+    (sigs_dir / "rules.json").write_text(json.dumps([{
+        "id": "TEST-003",
+        "pattern": "eval\\(",
+        "ignorecase": True,
+        "severity": "high",
+        "description": "Test rule",
+        "added_in": "2026.07.16"
+    }]))
+    manifest = {
+        "version": "2026.07.16",
+        "minimum_scanner_version": "1.1.0",
+        "latest_commit_sha": "PLACEHOLDER",
+        "signatures": ["signatures/rules.json"]
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    monkeypatch.chdir(tmp_path)
+    validate_main()  # must not raise
+
+
+def test_main_rejects_stale_manifest_entry(tmp_path, monkeypatch):
+    """A manifest listing a file that does not exist must fail."""
+    sigs_dir = tmp_path / "signatures"
+    sigs_dir.mkdir()
+    (sigs_dir / "rules.json").write_text(json.dumps([{
+        "id": "TEST-004",
+        "pattern": "x",
+        "ignorecase": True,
+        "severity": "low",
+        "description": "Test rule",
+        "added_in": "2026.07.16"
+    }]))
+    manifest = {
+        "version": "2026.07.16",
+        "minimum_scanner_version": "1.1.0",
+        "latest_commit_sha": "PLACEHOLDER",
+        "signatures": ["signatures/rules.json", "signatures/missing.json"]
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit):
+        validate_main()
