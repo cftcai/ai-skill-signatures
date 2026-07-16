@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate manifest.json and all signature files."""
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -42,6 +43,13 @@ def validate_signature_file(path: Path) -> None:
         if missing:
             print(f"ERROR: {path} missing keys {missing} in entry {entry.get('id', 'unknown')}")
             sys.exit(1)
+        # A pattern that does not compile would silently break the scanner at
+        # runtime, so reject it here at PR time.
+        try:
+            re.compile(entry["pattern"])
+        except re.error as e:
+            print(f"ERROR: {path} entry {entry.get('id', 'unknown')} has an invalid regex: {e}")
+            sys.exit(1)
     print(f"\u2713 {path.name} is valid")
 
 
@@ -60,17 +68,23 @@ def main() -> None:
     for sig_file in sorted(signatures_dir.glob("*.json")):
         validate_signature_file(sig_file)
 
-    # Check that manifest lists every file
+    # Check that manifest lists every file. Manifest entries are paths relative
+    # to the repository root (e.g. "signatures/prompt_injection.json"), which is
+    # how the scanner resolves them against its local clone.
     try:
         listed = set(json.loads(manifest_path.read_text(encoding="utf-8"))["signatures"])
     except (KeyError, json.JSONDecodeError) as e:
         print(f"ERROR: Could not read signatures list from manifest: {e}")
         sys.exit(1)
 
-    on_disk = {f.name for f in signatures_dir.glob("*.json")}
+    on_disk = {f.relative_to(root).as_posix() for f in signatures_dir.glob("*.json")}
     missing = on_disk - listed
     if missing:
         print(f"ERROR: Files missing from manifest.json: {missing}")
+        sys.exit(1)
+    stale = listed - on_disk
+    if stale:
+        print(f"ERROR: manifest.json lists files that do not exist: {stale}")
         sys.exit(1)
     print("\u2713 All signature files are listed in manifest.json")
 
