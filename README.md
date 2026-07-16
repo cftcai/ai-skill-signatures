@@ -12,13 +12,9 @@ This repository contains only data. The scanner tool consumes these signatures v
 - signatures/ — directory containing individual JSON rule files
 - .github/workflows/validate-signatures.yml — PR validation for JSON schema and structure
 
-## Named Regex Groups and Non-Capturing Groups
+## Non-Capturing Groups
 
-Signature patterns use regular expressions. Capturing groups ( ... ) extract substrings into match groups for later processing. Non-capturing groups (?: ... ) group alternatives without capturing, which is mandatory in these patterns for performance. The scanner only tests for the presence of a match and never uses captured text, so every group in EXFIL_PATTERNS and signature files must use the non-capturing form to avoid unnecessary allocation.
-
-Named groups (?P<name>...) allow later reference by name in Python re but are not required here because the scanner does not post-process captures.
-
-Example of mandatory non-capturing form used throughout:
+The scanner only tests whether a pattern matches; it never reads captured text. Prefer non-capturing groups `(?: ... )` over capturing groups `( ... )` so the regex engine does not track capture spans it will never use. Named groups `(?P<name>...)` are unnecessary for the same reason.
 
 ```json
 "pattern": "(?:ignore|override).*?(?:previous|all).*?(?:instructions|rules)"
@@ -42,17 +38,23 @@ The validate-signatures workflow enforces this schema on every pull request.
 
 ## Performance
 
-Regex patterns are compiled once at module import time in the scanner to eliminate repeated parsing overhead. Non-capturing groups are mandatory in all signature patterns because the scanner only checks for match presence and never extracts captured text.
+The scanner compiles each rule once per run — the built-in rules at import time, and the signature rules once when they are loaded from this repository. Compiling the full set is negligible; matching cost dominates and scales with the amount of code scanned.
 
-### Regex Compilation and Group Type Benchmark
+Measure it yourself with the included, dependency-free harness, which loads every pattern in `signatures/` and times both compilation and line-by-line matching against a synthetic corpus:
 
-| Operation                    | Naive (per-file compile + capturing groups) | Optimized (module-level compile + non-capturing) | Improvement |
-|------------------------------|---------------------------------------------|--------------------------------------------------|-------------|
-| 100 small .py files          | 0.42 s                                      | 0.09 s                                           | 4.7x        |
-| 1 large SKILL.md with 50 patterns | 0.18 s                                   | 0.03 s                                           | 6x          |
-| High-entropy string scan     | Higher allocation from captures             | Zero capture buffers                             | ~15-25% less memory |
+```bash
+python benchmarks/benchmark.py --lines 100000
+```
 
-The mock malicious skill fixture located at tests/malicious_skill.py in the ai-skill-scanner repository serves as the canonical test case. It exercises all high-severity detection paths (dangerous execution, exfiltration callbacks, prompt injection, and obfuscation) and is used by test_malicious_skill_fixture to validate both correctness and performance characteristics.
+Illustrative result (7 rules, Python 3.11, a laptop — re-run locally; absolute numbers are machine-dependent):
+
+| Metric | Value |
+|---|---|
+| Compile all rules (cold) | ~1.1 ms |
+| Scan 100,000 lines | ~1.4 s |
+| Throughput | ~70,000 lines/sec |
+
+The canonical correctness case is `tests/malicious_skill.py` in the ai-skill-scanner repository, which exercises every high-severity path (dangerous execution, exfiltration callbacks, prompt injection, obfuscation).
 
 ## Release Process
 
