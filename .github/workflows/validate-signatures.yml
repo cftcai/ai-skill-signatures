@@ -21,3 +21,6 @@ jobs:
 
       - name: Validate signatures
         run: python scripts/validate_signatures.py
+
+      - name: Benchmark smoke test
+        run: python benchmarks/benchmark.py --lines 2000 --repeat 1
